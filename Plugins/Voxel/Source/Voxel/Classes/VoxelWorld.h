@@ -9,6 +9,7 @@
 #include "QueuedThreadPool.h"
 #include "Camera/PlayerCameraManager.h"
 #include "VoxelMaterial.h"
+#include "VoxelGrassType.h"
 #include "LandscapeGrassType.h"
 #include "VoxelWorld.generated.h"
 
@@ -39,7 +40,7 @@ public:
 	FVoxelData* Data;
 	FVoxelRender* Render;
 
-	void CreateInEditor(TWeakObjectPtr<UVoxelInvokerComponent> CameraInvoker);
+	void CreateInEditor();
 	void DestroyInEditor();
 
 	int Depth;
@@ -61,7 +62,7 @@ public:
 		int GetDepthAt(FIntVector Position) const;
 
 	UPROPERTY(EditAnywhere, Category = "Voxel")
-		TArray<ULandscapeGrassType*> GrassTypes;
+		TArray<UVoxelGrassType*> GrassTypes;
 
 	UPROPERTY(EditAnywhere, Category = "Voxel")
 		float FoliageFPS;
@@ -161,12 +162,17 @@ public:
 
 	void UpdateVoxelModifiers();
 
+	AVoxelWorldGenerator* GetWorldGenerator();
+
+	int32 GetSeed();
+
 protected:
 	// Called when the game starts or when spawned
 	void BeginPlay() override;
 	void Tick(float DeltaTime) override;
 #if WITH_EDITOR
 	bool ShouldTickIfViewportsOnly() const override;
+	void PostLoad() override;
 #endif
 
 private:
@@ -177,6 +183,9 @@ private:
 	// Size of a voxel in cm
 	UPROPERTY(EditAnywhere, Category = "Voxel", AdvancedDisplay, meta = (DisplayName = "Voxel Size"))
 		float NewVoxelSize;
+
+	UPROPERTY(EditAnywhere, Category = "Voxel")
+		int32 Seed;
 
 	UPROPERTY(EditAnywhere, Category = "Voxel", AdvancedDisplay)
 		int MeshThreadCount;

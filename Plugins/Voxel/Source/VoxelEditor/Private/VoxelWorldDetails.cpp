@@ -11,12 +11,16 @@
 #include "LevelEditorViewport.h"
 #include "Editor.h"
 #include "IDetailPropertyRow.h"
-#include "VoxelWorldEditor.h"
+#include "Engine.h"
 
 DEFINE_LOG_CATEGORY(VoxelEditorLog)
 
 FVoxelWorldDetails::FVoxelWorldDetails()
-	: EditorWorld(nullptr)
+{
+
+}
+
+FVoxelWorldDetails::~FVoxelWorldDetails()
 {
 
 }
@@ -95,7 +99,7 @@ void FVoxelWorldDetails::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
 
 FReply FVoxelWorldDetails::OnWorldToggle()
 {
-	if (World.IsValid())
+	/*if (World.IsValid())
 	{
 		if (World->IsCreated())
 		{
@@ -103,22 +107,18 @@ FReply FVoxelWorldDetails::OnWorldToggle()
 		}
 		else
 		{
-			if (!EditorWorld.IsValid())
-			{
-				EditorWorld = World->GetWorld()->SpawnActor<AVoxelWorldEditor>();
-				EditorWorld->World = World;
-			}
+			CreateEditorWorld();
 
 			World->CreateInEditor(EditorWorld->GetInvoker());
 		}
-	}
+	}*/
 
 	return FReply::Handled();
 }
 
 FReply FVoxelWorldDetails::OnUpdateVoxelModifiers()
 {
-	if (World.IsValid() && World->GetWorld()->WorldType == EWorldType::Editor)
+	/*if (World.IsValid() && World->GetWorld()->WorldType == EWorldType::Editor)
 	{
 		bool bRecreate = false;
 		if (World->IsCreated())
@@ -131,11 +131,7 @@ FReply FVoxelWorldDetails::OnUpdateVoxelModifiers()
 
 		if (bRecreate)
 		{
-			if (!EditorWorld.IsValid())
-			{
-				EditorWorld = World->GetWorld()->SpawnActor<AVoxelWorldEditor>();
-				EditorWorld->World = World;
-			}
+			CreateEditorWorld();
 
 			World->CreateInEditor(EditorWorld->GetInvoker());
 		}
@@ -150,7 +146,7 @@ FReply FVoxelWorldDetails::OnUpdateVoxelModifiers()
 		{
 			UE_LOG(VoxelEditorLog, Error, TEXT("Not in editor"));
 		}
-	}
+	}*/
 
 	return FReply::Handled();
 }

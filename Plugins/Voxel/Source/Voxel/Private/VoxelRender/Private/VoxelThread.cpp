@@ -3,21 +3,24 @@
 #include "VoxelPrivatePCH.h"
 #include "VoxelThread.h"
 #include "VoxelData.h"
-#include "VoxelChunk.h"
+#include "VoxelChunkComponent.h"
 #include "VoxelPolygonizer.h"
 #include "InstancedStaticMesh.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "GenericPlatformProcess.h"
+#include "VoxelWorldGenerators/VoxelWorldGenerator.h"
 
 
-FAsyncFoliageTask::FAsyncFoliageTask(FProcMeshSection Section, FGrassVariety GrassVariety, uint8 Material, float VoxelSize, FIntVector ChunkPosition, int Seed, UVoxelChunk* Chunk)
+FAsyncFoliageTask::FAsyncFoliageTask(FProcMeshSection Section, FVoxelGrassVariety GrassVariety, uint8 Material, AVoxelWorld* World, FIntVector ChunkPosition, UVoxelChunkComponent* Chunk)
 	: Section(Section)
 	, GrassVariety(GrassVariety)
 	, Material(Material)
-	, VoxelSize(VoxelSize)
+	, VoxelSize(World->GetVoxelSize())
 	, ChunkPosition(ChunkPosition)
-	, Seed(Seed)
+	, Seed(World->GetSeed())
+	, Generator(World->GetWorldGenerator())
 	, Chunk(Chunk)
+	, World(World)
 {
 
 }
@@ -46,13 +49,11 @@ void FAsyncFoliageTask::DoWork()
 			(Material == MatC.Index1 && MatC.Alpha < 1 - ToleranceZone) || (Material == MatC.Index2 && ((MatC.Alpha > ToleranceZone) || (MatC.Index1 == MatC.Index2))))
 		{
 
-			FVector A = Section.ProcVertexBuffer[IndexA].Position;
-			FVector B = Section.ProcVertexBuffer[IndexB].Position;
-			FVector C = Section.ProcVertexBuffer[IndexC].Position;
+			const FVector A = Section.ProcVertexBuffer[IndexA].Position;
+			const FVector B = Section.ProcVertexBuffer[IndexB].Position;
+			const FVector C = Section.ProcVertexBuffer[IndexC].Position;
 
-			FVector N = (Section.ProcVertexBuffer[IndexA].Normal +
-				Section.ProcVertexBuffer[IndexB].Normal +
-				Section.ProcVertexBuffer[IndexC].Normal) / 3;
+			const FVector Normal = (Section.ProcVertexBuffer[IndexA].Normal + Section.ProcVertexBuffer[IndexB].Normal + Section.ProcVertexBuffer[IndexC].Normal) / 3;
 
 			FVector X = B - A;
 			FVector Y = C - A;
@@ -63,8 +64,9 @@ void FAsyncFoliageTask::DoWork()
 			X.Normalize();
 			Y.Normalize();
 
-			FVector ExactCenter = (A + B + C) / 3 * 1000000;
-			FIntVector IntCenter = ChunkPosition + FIntVector(FMath::RoundToInt(ExactCenter.X), FMath::RoundToInt(ExactCenter.Y), FMath::RoundToInt(ExactCenter.Z));
+			// Not exact, but all we want is a random generator that depends only on position
+			const FVector ExactCenter = (A + B + C) / 3 * 1000000;
+			const FIntVector IntCenter = ChunkPosition + FIntVector(FMath::RoundToInt(ExactCenter.X), FMath::RoundToInt(ExactCenter.Y), FMath::RoundToInt(ExactCenter.Z));
 
 			FRandomStream Stream(Seed * (IntCenter.X + Seed) * (IntCenter.Y + Seed * Seed) * (IntCenter.Z + Seed * Seed * Seed));
 
@@ -87,10 +89,12 @@ void FAsyncFoliageTask::DoWork()
 						CoordY = SizeY - CoordY;
 					}
 
-					FVector P = A + X * CoordX + Y * CoordY;
+					const FVector CurrentRelativePosition = A + X * CoordX + Y * CoordY;
+
+
+					// Compute scale
 
 					FVector Scale(1.0f);
-
 					switch (GrassVariety.Scaling)
 					{
 					case EGrassScaling::Uniform:
@@ -112,10 +116,37 @@ void FAsyncFoliageTask::DoWork()
 						check(0);
 					}
 
-					FRotator Rotation = GrassVariety.AlignToSurface ? UKismetMathLibrary::MakeRotFromZX(N, Stream.GetFraction() * X + Stream.GetFraction() * Y) : FRotator::ZeroRotator;
 
-					InstanceTransformsList.push_front(FTransform(Rotation, VoxelSize * P, Scale).ToMatrixWithScale());
-					InstanceTransformsCount++;
+					// Compute rotation
+
+					FRotator Rotation;
+					if (GrassVariety.AlignToSurface)
+					{
+						if (GrassVariety.RandomRotation)
+						{
+							Rotation = UKismetMathLibrary::MakeRotFromZX(Normal, Stream.GetFraction() * X + Stream.GetFraction() * Y);
+						}
+						else
+						{
+							Rotation = UKismetMathLibrary::MakeRotFromZX(Normal, X + Y);
+						}
+					}
+					else
+					{
+						Rotation = FRotator::ZeroRotator;
+					}
+
+					const FVector GrassUp = Rotation.RotateVector(FVector::UpVector).GetSafeNormal();
+					const FIntVector P = ChunkPosition + FIntVector(FMath::RoundToInt(CurrentRelativePosition.X), FMath::RoundToInt(CurrentRelativePosition.Y), FMath::RoundToInt(CurrentRelativePosition.Z));
+					const FVector WorldUp = Generator->GetUpVector(P.X, P.Y, P.Z).GetSafeNormal();
+
+					const float Angle = FMath::Acos(FVector::DotProduct(GrassUp, WorldUp));
+
+					if (Angle < GrassVariety.MaxAngleWithWorldUp)
+					{
+						InstanceTransformsList.push_front(FTransform(Rotation, VoxelSize * CurrentRelativePosition, Scale).ToMatrixWithScale());
+						InstanceTransformsCount++;
+					}
 				}
 			}
 		}
@@ -175,7 +206,7 @@ void FAsyncFoliageTask::DoWork()
 
 
 
-FAsyncPolygonizerTask::FAsyncPolygonizerTask(FVoxelPolygonizer* InBuilder, UVoxelChunk* Chunk)
+FAsyncPolygonizerTask::FAsyncPolygonizerTask(FVoxelPolygonizer* InBuilder, UVoxelChunkComponent* Chunk)
 	: Builder(InBuilder)
 	, Chunk(Chunk)
 {
