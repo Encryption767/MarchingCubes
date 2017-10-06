@@ -5,6 +5,8 @@
 #include "VoxelData/Private/ValueOctree.h"
 #include "VoxelMaterial.h"
 
+#pragma warning( disable : 4800 ) // VS2017 throws errors for converting int to bool.
+
 DECLARE_CYCLE_STAT(TEXT("VoxelPolygonizer ~ Cache"), STAT_CACHE, STATGROUP_Voxel);
 DECLARE_CYCLE_STAT(TEXT("VoxelPolygonizer ~ Main Iter"), STAT_MAIN_ITER, STATGROUP_Voxel);
 DECLARE_CYCLE_STAT(TEXT("VoxelPolygonizer ~ Transitions Iter"), STAT_TRANSITIONS_ITER, STATGROUP_Voxel);
@@ -102,14 +104,14 @@ void FVoxelPolygonizer::CreateSection(FProcMeshSection& OutSection)
 							{
 								const uint64 ONE = 1;
 								unsigned long CaseCode =
-									  (static_cast<bool>((CurrentCube & (ONE << ((LocalX + 0) + 4 * (LocalY + 0) + 4 * 4 * (LocalZ + 0)))) != 0) << 0)
-									| (static_cast<bool>((CurrentCube & (ONE << ((LocalX + 1) + 4 * (LocalY + 0) + 4 * 4 * (LocalZ + 0)))) != 0) << 1)
-									| (static_cast<bool>((CurrentCube & (ONE << ((LocalX + 0) + 4 * (LocalY + 1) + 4 * 4 * (LocalZ + 0)))) != 0) << 2)
-									| (static_cast<bool>((CurrentCube & (ONE << ((LocalX + 1) + 4 * (LocalY + 1) + 4 * 4 * (LocalZ + 0)))) != 0) << 3)
-									| (static_cast<bool>((CurrentCube & (ONE << ((LocalX + 0) + 4 * (LocalY + 0) + 4 * 4 * (LocalZ + 1)))) != 0) << 4)
-									| (static_cast<bool>((CurrentCube & (ONE << ((LocalX + 1) + 4 * (LocalY + 0) + 4 * 4 * (LocalZ + 1)))) != 0) << 5)
-									| (static_cast<bool>((CurrentCube & (ONE << ((LocalX + 0) + 4 * (LocalY + 1) + 4 * 4 * (LocalZ + 1)))) != 0) << 6)
-									| (static_cast<bool>((CurrentCube & (ONE << ((LocalX + 1) + 4 * (LocalY + 1) + 4 * 4 * (LocalZ + 1)))) != 0) << 7);
+									(static_cast<bool>(CurrentCube   & (ONE << ((LocalX + 0) + 4 * (LocalY + 0) + 4 * 4 * (LocalZ + 0)))) << 0)
+									| (static_cast<bool>(CurrentCube & (ONE << ((LocalX + 1) + 4 * (LocalY + 0) + 4 * 4 * (LocalZ + 0)))) << 1)
+									| (static_cast<bool>(CurrentCube & (ONE << ((LocalX + 0) + 4 * (LocalY + 1) + 4 * 4 * (LocalZ + 0)))) << 2)
+									| (static_cast<bool>(CurrentCube & (ONE << ((LocalX + 1) + 4 * (LocalY + 1) + 4 * 4 * (LocalZ + 0)))) << 3)
+									| (static_cast<bool>(CurrentCube & (ONE << ((LocalX + 0) + 4 * (LocalY + 0) + 4 * 4 * (LocalZ + 1)))) << 4)
+									| (static_cast<bool>(CurrentCube & (ONE << ((LocalX + 1) + 4 * (LocalY + 0) + 4 * 4 * (LocalZ + 1)))) << 5)
+									| (static_cast<bool>(CurrentCube & (ONE << ((LocalX + 0) + 4 * (LocalY + 1) + 4 * 4 * (LocalZ + 1)))) << 6)
+									| (static_cast<bool>(CurrentCube & (ONE << ((LocalX + 1) + 4 * (LocalY + 1) + 4 * 4 * (LocalZ + 1)))) << 7);
 
 								if (CaseCode != 0 && CaseCode != 511)
 								{
@@ -201,9 +203,9 @@ void FVoxelPolygonizer::CreateSection(FProcMeshSection& OutSection)
 											FVoxelMaterial Material;
 											float Value;
 											GetValueAndMaterial(
-												X - static_cast<bool>((CacheDirection & 0x01) * Step() != 0),
-												Y - static_cast<bool>((CacheDirection & 0x02) * Step() != 0),
-												Z - static_cast<bool>((CacheDirection & 0x04) * Step() != 0),
+												X - static_cast<bool>(CacheDirection & 0x01) * Step(),
+												Y - static_cast<bool>(CacheDirection & 0x02) * Step(),
+												Z - static_cast<bool>(CacheDirection & 0x04) * Step(),
 												Value,
 												Material
 											);
@@ -236,24 +238,20 @@ void FVoxelPolygonizer::CreateSection(FProcMeshSection& OutSection)
 
 												Q = t * static_cast<FVector>(PositionA) + (1 - t) * static_cast<FVector>(PositionB);
 												Alpha = t * AlphaAtA + (1 - t) * AlphaAtB;
-											}
-											else
+											} else
 											{
 												// Interpolate
 
 												if (bIsAlongX)
 												{
 													InterpolateX(PositionA.X, PositionB.X, PositionA.Y, PositionA.Z, Q, Alpha);
-												}
-												else if (bIsAlongY)
+												} else if (bIsAlongY)
 												{
 													InterpolateY(PositionA.X, PositionA.Y, PositionB.Y, PositionA.Z, Q, Alpha);
-												}
-												else if (bIsAlongZ)
+												} else if (bIsAlongZ)
 												{
 													InterpolateZ(PositionA.X, PositionA.Y, PositionA.Z, PositionB.Z, Q, Alpha);
-												}
-												else
+												} else
 												{
 													Alpha = 0;
 													checkf(false, TEXT("Error in interpolation: case should not exist"));
@@ -263,8 +261,7 @@ void FVoxelPolygonizer::CreateSection(FProcMeshSection& OutSection)
 											Vertices.push_front(Q);
 											Colors.push_front(FVoxelMaterial(CellMaterial.Index1, CellMaterial.Index2, Alpha).ToFColor());
 											VerticesSize++;
-										}
-										else
+										} else
 										{
 											VertexIndex = LoadVertex(X, Y, Z, CacheDirection, EdgeIndex);
 										}
@@ -338,8 +335,7 @@ void FVoxelPolygonizer::CreateSection(FProcMeshSection& OutSection)
 			{
 				// For normals only
 				AllToFiltered[AllVertexIndex] = -1;
-			}
-			else
+			} else
 			{
 				AllToFiltered[AllVertexIndex] = FilteredVertexIndex;
 
@@ -493,7 +489,7 @@ void FVoxelPolygonizer::CreateSection(FProcMeshSection& OutSection)
 								const unsigned short* VertexData = Transvoxel::transitionVertexData[CaseCode];
 								check(0 <= (CellClass & 0x7F) && (CellClass & 0x7F) < 56);
 								const Transvoxel::TransitionCellData CellData = Transvoxel::transitionCellData[CellClass & 0x7F];
-								const bool bFlip = ((CellClass >> 7) != 0);
+								const bool bFlip = CellClass >> 7;
 
 								TArray<int> VertexIndices;
 								VertexIndices.SetNumUninitialized(CellData.GetVertexCount());
@@ -531,13 +527,11 @@ void FVoxelPolygonizer::CreateSection(FProcMeshSection& OutSection)
 										{
 											// Edge along X axis
 											InterpolateX2D(Direction, PositionA.X, PositionB.X, PositionA.Y, Q, Alpha);
-										}
-										else if (bIsAlongY)
+										} else if (bIsAlongY)
 										{
 											// Edge along Y axis
 											InterpolateY2D(Direction, PositionA.X, PositionA.Y, PositionB.Y, Q, Alpha);
-										}
-										else
+										} else
 										{
 											Alpha = 0;
 											checkf(false, TEXT("Error in interpolation: case should not exist"));
@@ -553,8 +547,7 @@ void FVoxelPolygonizer::CreateSection(FProcMeshSection& OutSection)
 										{
 											SaveVertex2D(Direction, X, Y, EdgeIndex, VertexIndex);
 										}
-									}
-									else
+									} else
 									{
 										VertexIndex = LoadVertex2D(Direction, X, Y, CacheDirection, EdgeIndex);
 									}
@@ -636,12 +629,10 @@ void FVoxelPolygonizer::CreateSection(FProcMeshSection& OutSection)
 				if (A < OldVerticesSize)
 				{
 					Normal = OutSection.ProcVertexBuffer[FA].Normal;
-				}
-				else if (B < OldVerticesSize)
+				} else if (B < OldVerticesSize)
 				{
 					Normal = OutSection.ProcVertexBuffer[FB].Normal;
-				}
-				else if (C < OldVerticesSize)
+				} else if (C < OldVerticesSize)
 				{
 					Normal = OutSection.ProcVertexBuffer[FC].Normal;
 				}
@@ -764,8 +755,7 @@ void FVoxelPolygonizer::GetValueAndMaterial(int X, int Y, int Z, float& OutValue
 	{
 		OutValue = CachedValues[(X / Step() + 1) + 18 * (Y / Step() + 1) + 18 * 18 * (Z / Step() + 1)];
 		OutMaterial = CachedMaterials[(X / Step() + 1) + 18 * (Y / Step() + 1) + 18 * 18 * (Z / Step() + 1)];
-	}
-	else
+	} else
 	{
 		Data->GetValueAndMaterial(X + ChunkPosition.X, Y + ChunkPosition.Y, Z + ChunkPosition.Z, OutValue, OutMaterial, LastOctree);
 	}
@@ -794,9 +784,9 @@ void FVoxelPolygonizer::SaveVertex(int X, int Y, int Z, short EdgeIndex, int Ind
 
 int FVoxelPolygonizer::LoadVertex(int X, int Y, int Z, short Direction, short EdgeIndex)
 {
-	bool XIsDifferent = bool((Direction & 0x01) != 0);
-	bool YIsDifferent = bool((Direction & 0x02) != 0);
-	bool ZIsDifferent = bool((Direction & 0x04) != 0);
+	bool XIsDifferent = Direction & 0x01;
+	bool YIsDifferent = Direction & 0x02;
+	bool ZIsDifferent = Direction & 0x04;
 
 	// +1: normals offset
 	check(0 <= X - XIsDifferent + 1 && X - XIsDifferent + 1 < 17);
@@ -827,8 +817,8 @@ void FVoxelPolygonizer::SaveVertex2D(TransitionDirection Direction, int X, int Y
 
 int FVoxelPolygonizer::LoadVertex2D(TransitionDirection Direction, int X, int Y, short CacheDirection, short EdgeIndex)
 {
-	bool XIsDifferent = bool((CacheDirection & 0x01) != 0);
-	bool YIsDifferent = bool((CacheDirection & 0x02) != 0);
+	bool XIsDifferent = CacheDirection & 0x01;
+	bool YIsDifferent = CacheDirection & 0x02;
 
 	if (EdgeIndex == 8 || EdgeIndex == 9)
 	{
@@ -869,7 +859,7 @@ int FVoxelPolygonizer::LoadVertex2D(TransitionDirection Direction, int X, int Y,
 	check(0 <= Y - YIsDifferent && Y - YIsDifferent < 17);
 	check(0 <= EdgeIndex && EdgeIndex < 7);
 
-	check(Cache2D[Direction][X - XIsDifferent][Y - YIsDifferent][EdgeIndex] >= 0);
+	check(Cache2D[Direction][X - XIsDifferent][Y - YIsDifferent][EdgeIndex] >= 0); // Crashing when loading Performance Test map. ~Encryption
 	return Cache2D[Direction][X - XIsDifferent][Y - YIsDifferent][EdgeIndex];
 }
 
@@ -890,8 +880,7 @@ void FVoxelPolygonizer::InterpolateX(const int MinX, const int MaxX, const int Y
 
 		OutVector = t * FVector(MinX, Y, Z) + (1 - t) *  FVector(MaxX, Y, Z);
 		OutAlpha = t * MaterialAtA.Alpha + (1 - t) * MaterialAtB.Alpha;
-	}
-	else
+	} else
 	{
 		check((MaxX + MinX) % 2 == 0);
 		int xMiddle = (MaxX + MinX) / 2;
@@ -903,8 +892,7 @@ void FVoxelPolygonizer::InterpolateX(const int MinX, const int MaxX, const int Y
 		{
 			// If min and middle have same sign
 			return InterpolateX(xMiddle, MaxX, Y, Z, OutVector, OutAlpha);
-		}
-		else
+		} else
 		{
 			// If max and middle have same sign
 			return InterpolateX(MinX, xMiddle, Y, Z, OutVector, OutAlpha);
@@ -929,8 +917,7 @@ void FVoxelPolygonizer::InterpolateY(const int X, const int MinY, const int MaxY
 
 		OutVector = t * FVector(X, MinY, Z) + (1 - t) *  FVector(X, MaxY, Z);
 		OutAlpha = t * MaterialAtA.Alpha + (1 - t) * MaterialAtB.Alpha;
-	}
-	else
+	} else
 	{
 		check((MaxY + MinY) % 2 == 0);
 		int yMiddle = (MaxY + MinY) / 2;
@@ -942,8 +929,7 @@ void FVoxelPolygonizer::InterpolateY(const int X, const int MinY, const int MaxY
 		{
 			// If min and middle have same sign
 			return InterpolateY(X, yMiddle, MaxY, Z, OutVector, OutAlpha);
-		}
-		else
+		} else
 		{
 			// If max and middle have same sign
 			return InterpolateY(X, MinY, yMiddle, Z, OutVector, OutAlpha);
@@ -968,8 +954,7 @@ void FVoxelPolygonizer::InterpolateZ(const int X, const int Y, const int MinZ, c
 
 		OutVector = t * FVector(X, Y, MinZ) + (1 - t) *  FVector(X, Y, MaxZ);
 		OutAlpha = t * MaterialAtA.Alpha + (1 - t) * MaterialAtB.Alpha;
-	}
-	else
+	} else
 	{
 		check((MaxZ + MinZ) % 2 == 0);
 		int zMiddle = (MaxZ + MinZ) / 2;
@@ -981,8 +966,7 @@ void FVoxelPolygonizer::InterpolateZ(const int X, const int Y, const int MinZ, c
 		{
 			// If min and middle have same sign
 			return InterpolateZ(X, Y, zMiddle, MaxZ, OutVector, OutAlpha);
-		}
-		else
+		} else
 		{
 			// If max and middle have same sign
 			return InterpolateZ(X, Y, MinZ, zMiddle, OutVector, OutAlpha);
@@ -1013,8 +997,7 @@ void FVoxelPolygonizer::InterpolateX2D(TransitionDirection Direction, const int 
 
 		OutVector = t * FVector(GMinX, GMinY, GMinZ) + (1 - t) *  FVector(GMaxX, GMaxY, GMaxZ);
 		OutAlpha = t * MaterialAtA.Alpha + (1 - t) * MaterialAtB.Alpha;
-	}
-	else
+	} else
 	{
 		check((MaxX + MinX) % 2 == 0);
 		int xMiddle = (MaxX + MinX) / 2;
@@ -1026,8 +1009,7 @@ void FVoxelPolygonizer::InterpolateX2D(TransitionDirection Direction, const int 
 		{
 			// If min and middle have same sign
 			return InterpolateX2D(Direction, xMiddle, MaxX, Y, OutVector, OutAlpha);
-		}
-		else
+		} else
 		{
 			// If max and middle have same sign
 			return InterpolateX2D(Direction, MinX, xMiddle, Y, OutVector, OutAlpha);
@@ -1056,8 +1038,7 @@ void FVoxelPolygonizer::InterpolateY2D(TransitionDirection Direction, const int 
 
 		OutVector = t * FVector(GMinX, GMinY, GMinZ) + (1 - t) *  FVector(GMaxX, GMaxY, GMaxZ);
 		OutAlpha = t * MaterialAtA.Alpha + (1 - t) * MaterialAtB.Alpha;
-	}
-	else
+	} else
 	{
 		check((MaxY + MinY) % 2 == 0);
 		int yMiddle = (MaxY + MinY) / 2;
@@ -1069,8 +1050,7 @@ void FVoxelPolygonizer::InterpolateY2D(TransitionDirection Direction, const int 
 		{
 			// If min and middle have same sign
 			return InterpolateY2D(Direction, X, yMiddle, MaxY, OutVector, OutAlpha);
-		}
-		else
+		} else
 		{
 			// If max and middle have same sign
 			return InterpolateY2D(Direction, X, MinY, yMiddle, OutVector, OutAlpha);
