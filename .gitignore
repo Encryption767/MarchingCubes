@@ -12,3 +12,4 @@ Content/StarterContent
 *.suo
 *.xcodeproj
 *.xcworkspace
+Config/DefaultEditorPerProjectUserSettings.ini
